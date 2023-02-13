@@ -2,6 +2,7 @@ package com.dws.challenge.web;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.domain.AccountTransfer;
+import com.dws.challenge.exception.AccountNotFoundException;
 import com.dws.challenge.exception.DuplicateAccountIdException;
 import com.dws.challenge.exception.InsufficientBalanceException;
 import com.dws.challenge.exception.TransferFailureException;
@@ -79,14 +80,17 @@ public class AccountsController {
 						"Failed to transfer balance from account id - " + accountTransfer.getFromAccountId()
 								+ " to account id - " + accountTransfer.getToAccountId() + "!!!");
 			}
+		} catch (AccountNotFoundException anfe) {
+			return new ResponseEntity<>(anfe.getMessage(), HttpStatus.NOT_FOUND);
 		} catch (InsufficientBalanceException ibe) {
-			return new ResponseEntity<>(ibe.getMessage(), HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(ibe.getMessage(), HttpStatus.NOT_ACCEPTABLE);
 		} catch (TransferFailureException tfe) {
 			return new ResponseEntity<>(tfe.getMessage(), HttpStatus.BAD_REQUEST);
 		} catch (Exception e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+			e.printStackTrace();
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-
+		
 		return new ResponseEntity<>(HttpStatus.ACCEPTED);
 	}
 

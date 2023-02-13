@@ -1,7 +1,6 @@
 package com.dws.challenge.repository;
 
 import com.dws.challenge.domain.Account;
-import com.dws.challenge.domain.AccountTransfer;
 import com.dws.challenge.exception.DuplicateAccountIdException;
 
 public interface AccountsRepository {
@@ -12,6 +11,6 @@ public interface AccountsRepository {
 
   void clearAccounts();
   
-  boolean transferAmount(AccountTransfer accountTransfer);
+  Account updateAccount(Account account);
   
 }

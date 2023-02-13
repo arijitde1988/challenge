@@ -1,18 +1,12 @@
 package com.dws.challenge.repository;
 
-import com.dws.challenge.domain.Account;
-import com.dws.challenge.domain.AccountTransfer;
-import com.dws.challenge.exception.DuplicateAccountIdException;
-import com.dws.challenge.exception.InsufficientBalanceException;
-import com.dws.challenge.exception.TransferFailureException;
-
-import lombok.Synchronized;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.dws.challenge.domain.Account;
+import com.dws.challenge.exception.DuplicateAccountIdException;
 
 @Repository
 public class AccountsRepositoryInMemory implements AccountsRepository {
@@ -38,52 +32,15 @@ public class AccountsRepositoryInMemory implements AccountsRepository {
 	}
 
 	/**
-	 * This is synchronized method which transfers amount from from-account to
-	 * to-account.
+	 * It accepts Account object and update the account map by updated value.
 	 * 
-	 * @param accountTransfer it accepts AccountTransfer object Its also checks from
-	 *                        account negative balance and add that non-negative
-	 *                        amount to to account balance.
-	 * @throws InsufficientBalanceException if the from account balance is negative
-	 *                                      after subtraction of transfer amount.
-	 * @throws TransferFailureException     if transfer computation fails
-	 * @return true if transfer successful else false.
+	 * @param account it accepts Account object and update the account map by updated value.
+	 * @return Returns updated account object.
 	 * @author Arijit De
 	 */
 	@Override
-	@Synchronized
-	public boolean transferAmount(AccountTransfer accountTransfer) {
-		
-		boolean isTransfered = false;
-		Account toAccount = accounts.get(accountTransfer.getToAccountId());
-		Account frmAccount = accounts.get(accountTransfer.getFromAccountId());
-		BigDecimal remAmnt = frmAccount.getBalance().subtract(accountTransfer.getBalance());
-		if (remAmnt.compareTo(BigDecimal.ZERO) == -1) {
-			throw new InsufficientBalanceException(
-					"Insufficient Balance Account id " + frmAccount.getAccountId() + "!!!");
-		} else {
-
-			try {
-				frmAccount = accounts.computeIfPresent(frmAccount.getAccountId(), (accountId, account) -> {
-					account.setBalance(account.getBalance().subtract(accountTransfer.getBalance()));
-					return account;
-				});
-
-				toAccount = accounts.computeIfPresent(toAccount.getAccountId(), (accountId, account) -> {
-					account.setBalance(account.getBalance().add(accountTransfer.getBalance()));
-					return account;
-				});
-
-				isTransfered = true;
-
-			} catch (Exception e) {
-				throw new TransferFailureException("Failed to transfer balance from account id - "
-						+ frmAccount.getAccountId() + " to account id - " + toAccount.getAccountId() + "!!!");
-			}
-
-		}
-
-		return isTransfered;
+	public Account updateAccount(Account account) {
+		return accounts.replace(account.getAccountId(), account);
 	}
 
 }
