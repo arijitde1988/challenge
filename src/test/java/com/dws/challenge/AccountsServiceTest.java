@@ -26,7 +26,7 @@ class AccountsServiceTest {
 	@Autowired
 	private AccountsService accountsService;
 
-	// @Test
+	@Test
 	void addAccount() {
 		Account account = new Account("Id-123");
 		account.setBalance(new BigDecimal(1000));
@@ -35,7 +35,7 @@ class AccountsServiceTest {
 		assertThat(this.accountsService.getAccount("Id-123")).isEqualTo(account);
 	}
 
-	// @Test
+	@Test
 	void addAccount_failsOnDuplicateId() {
 		String uniqueId = "Id-" + System.currentTimeMillis();
 		Account account = new Account(uniqueId);
