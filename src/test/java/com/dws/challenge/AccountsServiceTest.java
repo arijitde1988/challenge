@@ -14,6 +14,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.domain.AccountTransfer;
+import com.dws.challenge.exception.AccountBusyException;
 import com.dws.challenge.exception.AccountNotFoundException;
 import com.dws.challenge.exception.DuplicateAccountIdException;
 import com.dws.challenge.exception.InsufficientBalanceException;
@@ -82,7 +83,7 @@ class AccountsServiceTest {
 
 				assertThat(this.accountsService.getAccount("Id-A004")).isEqualTo(frmAccount);
 				assertThat(this.accountsService.getAccount("Id-A005")).isEqualTo(tAccount);
-				
+
 				System.out.println("MultiThread execution " + i + ") From Acc - " + frmAccount.getAccountId()
 						+ " To Acc - " + tAccount.getAccountId());
 				AccountTransfer acctrnsf = new AccountTransfer(frmAccount.getAccountId(), tAccount.getAccountId(),
@@ -97,10 +98,10 @@ class AccountsServiceTest {
 				Account tAccount = new Account("Id-A008");
 				tAccount.setBalance(new BigDecimal(1500));
 				this.accountsService.createAccount(tAccount);
-				
+
 				assertThat(this.accountsService.getAccount("Id-A007")).isEqualTo(frmAccount);
 				assertThat(this.accountsService.getAccount("Id-A008")).isEqualTo(tAccount);
-				
+
 				System.out.println("MultiThread execution " + i + ") From Acc - " + frmAccount.getAccountId()
 						+ " To Acc - " + tAccount.getAccountId());
 				AccountTransfer acctrnsf = new AccountTransfer(frmAccount.getAccountId(), tAccount.getAccountId(),
@@ -119,23 +120,23 @@ class AccountsServiceTest {
 
 	}
 
-	
 	/**
 	 * Test method which checks failed account transfer for insufficient balance.
+	 * 
 	 * @author Arijit De
-	 * */
+	 */
 	@Test
 	void account_transfer_failed_insufficient_balance() {
-		Account fromAccount = new Account("Id-123");
+		Account fromAccount = new Account("Id-C001");
 		fromAccount.setBalance(new BigDecimal(1000));
 		this.accountsService.createAccount(fromAccount);
 
-		Account toAccount = new Account("Id-345");
+		Account toAccount = new Account("Id-C002");
 		toAccount.setBalance(new BigDecimal(500));
 		this.accountsService.createAccount(toAccount);
 
-		assertThat(this.accountsService.getAccount("Id-123")).isEqualTo(fromAccount);
-		assertThat(this.accountsService.getAccount("Id-345")).isEqualTo(toAccount);
+		assertThat(this.accountsService.getAccount("Id-C001")).isEqualTo(fromAccount);
+		assertThat(this.accountsService.getAccount("Id-C002")).isEqualTo(toAccount);
 
 		AccountTransfer accountTransfer = new AccountTransfer(fromAccount.getAccountId(), toAccount.getAccountId(),
 				new BigDecimal(1500));
@@ -147,22 +148,79 @@ class AccountsServiceTest {
 					.isEqualTo("Insufficient Balance Account id " + fromAccount.getAccountId() + "!!!");
 		}
 	}
-	
+
 	/**
 	 * Test method which checks failed account transfer for non-existence account .
+	 * 
 	 * @author Arijit De
-	 * */
+	 */
 	@Test
 	void account_transfer_failed_nonexistence_account() {
- 
-		AccountTransfer accountTransfer = new AccountTransfer("A1-001", "A2-002",
-				new BigDecimal(1500));
+
+		AccountTransfer accountTransfer = new AccountTransfer("A1-001", "A2-002", new BigDecimal(1500));
 		try {
 			this.accountsService.transferAmount(accountTransfer);
 			fail("Should have failed due to account not exists from account and to account");
 		} catch (AccountNotFoundException anfe) {
-			assertThat(anfe.getMessage())
-					.isEqualTo("Account not found !!!");
+			assertThat(anfe.getMessage()).isEqualTo("Account not found !!!");
 		}
 	}
+
+	/**
+	 * Test method which checks concurrent account transfer acquiring the lock on
+	 * top of account no for cross transfer.
+	 * 
+	 * @author Arijit De
+	 */
+	@Test
+	void concurrent_multi_cross_account_transfer() {
+
+		Account fromAccount = new Account("Id-A0010");
+		fromAccount.setBalance(new BigDecimal(100000));
+		this.accountsService.createAccount(fromAccount);
+
+		Account toAccount = new Account("Id-A0020");
+		toAccount.setBalance(new BigDecimal(100000));
+		this.accountsService.createAccount(toAccount);
+
+		assertThat(this.accountsService.getAccount("Id-A0010")).isEqualTo(fromAccount);
+		assertThat(this.accountsService.getAccount("Id-A0020")).isEqualTo(toAccount);
+
+		List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10).parallelStream().forEach(i -> {
+			try {
+				Thread.sleep(1200);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			if (i % 2 == 0) {
+				System.out.println("MultiThread execution " + i + ") From Acc - " + toAccount.getAccountId()
+						+ " To Acc - " + fromAccount.getAccountId());
+				AccountTransfer accountTransfer = new AccountTransfer(toAccount.getAccountId(),
+						fromAccount.getAccountId(), new BigDecimal(1500));
+				try {
+					this.accountsService.transferAmount(accountTransfer);
+				} catch (AccountBusyException abe) {
+					assertThat(abe.getMessage()).isEqualTo("Transaction is processing either on From Acc or To Acc. Please wait and try after sometime.");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+			} else {
+				System.out.println("MultiThread execution " + i + ") From Acc - " + fromAccount.getAccountId()
+						+ " To Acc - " + toAccount.getAccountId());
+				AccountTransfer accountTransfer = new AccountTransfer(fromAccount.getAccountId(),
+						toAccount.getAccountId(), new BigDecimal(1500));
+				try {
+					this.accountsService.transferAmount(accountTransfer);
+				} catch (AccountBusyException abe) {
+					assertThat(abe.getMessage()).isEqualTo("Transaction is processing either on From Acc or To Acc. Please wait and try after sometime.");
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+		});
+
+	}
+
 }

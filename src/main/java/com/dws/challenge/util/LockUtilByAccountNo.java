@@ -27,24 +27,59 @@ public class LockUtilByAccountNo {
         private final AtomicInteger numberOfThreadsInQueue = new AtomicInteger(1);
         
         private LockWrapper addThreadInQueue() {
-            numberOfThreadsInQueue.incrementAndGet(); 
+            int inc = numberOfThreadsInQueue.incrementAndGet(); 
+            System.err.println("Thread Count after add - " + inc);
             return this;
         }
         
         private int removeThreadFromQueue() {
-            return numberOfThreadsInQueue.decrementAndGet(); 
+            int dec = numberOfThreadsInQueue.decrementAndGet();
+            System.err.println("Thread Count after remove - " + dec);
+            return dec;
         }
         
+    }
+    
+    /**
+     * Used to get object of LockWrapper on top of which lock acquired
+     * @param accNo Account No no top of which lock acquired
+     * @author Arijit De
+     * @return Object of type LockWrapper on top of which lock acquired
+     * */
+    public boolean isLockAquired(String accNo) {
+    	return locks.containsKey(accNo);
+    }
+    
+    /**
+     * Used to get object of LockWrapper on top of which lock acquired
+     * @param accNo Account No no top of which lock acquired
+     * @author Arijit De
+     * @return Object of type LockWrapper on top of which lock acquired
+     * */
+    public Object getLockedObject(String accNo) {
+    	return locks.get(accNo);
     }
     
     /**
      * Used to acquire lock on top of accountNo
      * @param accountNo Account No no top of which lock acquired
      * @author Arijit De
+     * @throws InterruptedException 
      * */
     public void lock(String accountNo) {
         LockWrapper lockWrapper = locks.compute(accountNo, (k, v) -> v == null ? new LockWrapper() : v.addThreadInQueue());
         lockWrapper.lock.lock();
+    }
+    
+    /**
+     * Used to acquire lock on top of accountNo
+     * @param accountNo Account No no top of which lock acquired
+     * @author Arijit De
+     * @return true if lock aquired or else false 
+     * */
+    public boolean tryLock(String accountNo) {
+        LockWrapper lockWrapper = locks.compute(accountNo, (k, v) -> v == null ? new LockWrapper() : v.addThreadInQueue());
+        return lockWrapper.lock.tryLock();
     }
     
     /**

@@ -2,6 +2,7 @@ package com.dws.challenge.web;
 
 import com.dws.challenge.domain.Account;
 import com.dws.challenge.domain.AccountTransfer;
+import com.dws.challenge.exception.AccountBusyException;
 import com.dws.challenge.exception.AccountNotFoundException;
 import com.dws.challenge.exception.DuplicateAccountIdException;
 import com.dws.challenge.exception.InsufficientBalanceException;
@@ -82,6 +83,8 @@ public class AccountsController {
 			}
 		} catch (AccountNotFoundException anfe) {
 			return new ResponseEntity<>(anfe.getMessage(), HttpStatus.NOT_FOUND);
+		} catch (AccountBusyException abe) {
+			return new ResponseEntity<>(abe.getMessage(), HttpStatus.CONFLICT);
 		} catch (InsufficientBalanceException ibe) {
 			return new ResponseEntity<>(ibe.getMessage(), HttpStatus.NOT_ACCEPTABLE);
 		} catch (TransferFailureException tfe) {
